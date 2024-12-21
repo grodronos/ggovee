@@ -1,4 +1,5 @@
 import aiohttp
+import asyncio
 import logging
 
 _LOGGER = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ class GoveeApiClient:
                     data = await response.json()
                     return data.get("data", {}).get("devices", [])
                 else:
-                    _LOGGER.error("Failed to fetch devices: %s", await response.text())
+                    _LOGGER.error("Nepodařilo se získat zařízení: %s", await response.text())
                     return []
 
     async def get_device_state(self, device):
@@ -32,12 +33,13 @@ class GoveeApiClient:
                     data = await response.json()
                     return data.get("data", {}).get("properties", [])
                 else:
-                    _LOGGER.error("Failed to fetch device state for %s: %s", device["device"], await response.text())
+                    _LOGGER.error("Nepodařilo se získat stav zařízení %s: %s", device["device"], await response.text())
                     return []
 
     async def update_devices(self):
         devices = await self.get_devices()
-        for device in devices:
-            state = await self.get_device_state(device)
+        tasks = [self.get_device_state(device) for device in devices]
+        states = await asyncio.gather(*tasks)
+        for device, state in zip(devices, states):
             device.update(state)
         return devices
