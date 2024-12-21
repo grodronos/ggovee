@@ -1,0 +1,9 @@
+{
+    "domain": "govee_h5179",
+    "name": "Govee H5179 Integration",
+    "version": "1.0.0",
+    "documentation": "https://github.com/grodronos/ggovee",
+    "dependencies": [],
+    "codeowners": ["grodronos@gmail.com"],
+    "requirements": ["requests>=2.25.1"]
+}  
