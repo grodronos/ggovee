@@ -8,11 +8,9 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup(hass: HomeAssistant, config: dict):
-    """Nastavení integrace přes YAML (nepoužívá se v tomto případě)."""
     return True
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
-    """Nastavení integrace z Config Flow."""
     hass.data.setdefault(DOMAIN, {})
     hass.async_create_task(
         hass.config_entries.async_forward_entry_setup(entry, "sensor")
@@ -20,6 +18,5 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     return True
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
-    """Odstranění integrace."""
     await hass.config_entries.async_forward_entry_unload(entry, "sensor")
     return True

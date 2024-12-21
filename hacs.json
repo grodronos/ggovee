@@ -1,10 +1,9 @@
 {
-    "name": "Govee H5179 Integration",
+    "name": "ggovee",
     "content_in_root": false,
-    "domains": ["govee_h5179"],
-    "country": ["CZ"],
+    "domains": ["ggovee"],
     "homeassistant": "2023.1.0",
-    "persistent_directory": "custom_components/govee_h5179",
+    "persistent_directory": "custom_components/ggovee",
     "iot_class": "Cloud Polling",
     "render_readme": true
 }  
