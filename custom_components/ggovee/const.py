@@ -1,4 +1,5 @@
 """Constants for the Govee integration."""
+from datetime import timedelta
 from homeassistant.const import TEMP_CELSIUS, Platform
 
 DOMAIN = "ggovee"
@@ -13,9 +14,8 @@ STORAGE_VERSION = 1
 MANUFACTURER = "Govee"
 BRAND = "Govee"
 
-UPDATE_INTERVAL = 300
+# Nastavíme interval updatů na 5 minut (300 sekund)
+UPDATE_INTERVAL = timedelta(seconds=300)
 
-# Tady doplňujeme PLATFORMS,
-# podle toho, jaké platformy váš kód používá.
-# V repozitáři vidím pouze `sensor.py`, takže:
+# Pokud používáte pouze sensor platformu, stačí:
 PLATFORMS = [Platform.SENSOR]
