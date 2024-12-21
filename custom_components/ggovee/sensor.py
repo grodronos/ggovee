@@ -1,31 +1,31 @@
-"""Platforma pro senzory Govee BLE v Home Assistant."""
+"""Platforma senzoru pro ggovee."""
 from __future__ import annotations
 
-import logging
 from datetime import timedelta
+import logging
+
+from govee_api_laggat import Govee
+from govee_api_laggat.govee_dtos import GoveeDevice
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
-    SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     PERCENTAGE,
     TEMP_CELSIUS,
-    UnitOfTemperature,
-    UnitOfHumidity,
-    UnitOfLight,
-    UnitOfEnergy,
-    UnitOfPower,
+    LIGHT_LUX,
+    ELECTRIC_POTENTIAL_VOLT,
+    ELECTRIC_CURRENT_AMPERE,
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from . import GoveeBleDeviceDataUpdateCoordinator
 from .const import DOMAIN
+from .coordinator import GoveeDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -35,63 +35,78 @@ SENSOR_TYPES: tuple[SensorEntityDescription, ...] = (
     SensorEntityDescription(
         key="temperature",
         name="Teplota",
-        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         device_class=SensorDeviceClass.TEMPERATURE,
-        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=TEMP_CELSIUS,
     ),
     SensorEntityDescription(
         key="humidity",
         name="Vlhkost",
-        native_unit_of_measurement=UnitOfHumidity.PERCENT,
         device_class=SensorDeviceClass.HUMIDITY,
-        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
     ),
     SensorEntityDescription(
         key="battery",
         name="Baterie",
-        native_unit_of_measurement=PERCENTAGE,
         device_class=SensorDeviceClass.BATTERY,
-        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=PERCENTAGE,
+    ),
+    SensorEntityDescription(
+        key="illuminance",
+        name="Osvětlení",
+        device_class=SensorDeviceClass.ILLUMINANCE,
+        native_unit_of_measurement=LIGHT_LUX,
+    ),
+    SensorEntityDescription(
+        key="voltage",
+        name="Napětí",
+        device_class=SensorDeviceClass.VOLTAGE,
+        native_unit_of_measurement=ELECTRIC_POTENTIAL_VOLT,
+    ),
+    SensorEntityDescription(
+        key="current",
+        name="Proud",
+        device_class=SensorDeviceClass.CURRENT,
+        native_unit_of_measurement=ELECTRIC_CURRENT_AMPERE,
     ),
 )
-
 
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    """Nastavení platformy sensorů."""
-    coordinator: GoveeBleDeviceDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
+    """Nastavení platformy senzoru."""
+    coordinator: GoveeDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities(
-        GoveeTemperatureHumiditySensor(coordinator, description)
+        GoveeSensor(coordinator, device, description)
+        for device in coordinator.data
         for description in SENSOR_TYPES
-        if description.key in coordinator.data
+        if description.key in device.sensors
     )
 
-
-class GoveeTemperatureHumiditySensor(
-    CoordinatorEntity[GoveeBleDeviceDataUpdateCoordinator], SensorEntity
-):
-    """Reprezentace senzoru teploty a vlhkosti Govee BLE."""
+class GoveeSensor(CoordinatorEntity[GoveeDataUpdateCoordinator], SensorEntity):
+    """Reprezentace senzoru Govee."""
 
     def __init__(
         self,
-        coordinator: GoveeBleDeviceDataUpdateCoordinator,
+        coordinator: GoveeDataUpdateCoordinator,
+        device: GoveeDevice,
         description: SensorEntityDescription,
     ) -> None:
         """Inicializace senzoru."""
         super().__init__(coordinator)
         self.entity_description = description
-        self._attr_unique_id = f"{coordinator.address}-{description.key}"
-        self._attr_name = f"{coordinator.name} {description.name}"
+        self._device = device
+        self._attr_unique_id = f"{device.device}-{description.key}"
+        self._attr_name = f"{device.device_name} {description.name}"
         self._attr_device_info = {
-            "identifiers": {(DOMAIN, self._attr_unique_id)},
-            "name": self._attr_name,
+            "identifiers": {(DOMAIN, device.device)},
+            "name": device.device_name,
             "manufacturer": "Govee",
+            "model": device.model,
         }
 
     @property
     def native_value(self):
         """Vrátí stav senzoru."""
-        return self.coordinator.data.get(self.entity_description.key)
+        return self._device.sensors.get(self.entity_description.key)
