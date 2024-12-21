@@ -1,48 +1,51 @@
-import asyncio
+"""Support for Govee bluetooth sensors."""
 import logging
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from .const import DOMAIN, PLATFORMS, UPDATE_INTERVAL
-from .govee_api import GoveeApiClient
+from .const import DOMAIN, STARTUP_MESSAGE
+from .coordinator import GoveeDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Nastavení integrace z konfiguračního záznamu."""
-    api_key = entry.data["api_key"]
-    client = GoveeApiClient(api_key)
+    """Set up Govee from a config entry."""
+    _LOGGER.info(STARTUP_MESSAGE)
 
-    coordinator = DataUpdateCoordinator(
-        hass,
-        _LOGGER,
-        name="Govee devices",
-        update_method=client.update_devices,
-        update_interval=UPDATE_INTERVAL,
-    )
+    # Vytvoříme instanci koordinátoru:
+    coordinator = GoveeDataUpdateCoordinator(hass, entry)
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
-        "client": client,
-        "coordinator": coordinator,
-    }
-
+    # Provedeme první (blokující) refresh, aby se natáhla data
     await coordinator.async_config_entry_first_refresh()
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    # Zeptáme se koordinátoru na data (koordinátor musí vracet něco jako {"device": {...}, ...})
+    device = None
+    if coordinator.data:
+        device = coordinator.data.get("device")
 
-    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
+    # Uložíme data do hass.data - sem si pak "sáhne" platforma sensor.py nebo climate.py
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN][entry.entry_id] = {
+        "coordinator": coordinator,
+        "device": device,  # Ukládáme device, aby byl k dispozici v sensor.py i jinde
+    }
+
+    # Dopředné nastavení platformy sensor (to samé pro climate)
+    hass.async_create_task(
+        hass.config_entries.async_forward_entry_setup(entry, "sensor")
+    )
+    hass.async_create_task(
+        hass.config_entries.async_forward_entry_setup(entry, "climate")
+    )
+
     return True
 
+
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Odstranění integrace."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    """Unload Govee config entry."""
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, ["sensor", "climate"])
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
     return unload_ok
-
-async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Přečtení konfigurace a restart integrace."""
-    await async_unload_entry(hass, entry)
-    await async_setup_entry(hass, entry)
