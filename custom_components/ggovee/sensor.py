@@ -1,103 +1,64 @@
 import logging
-import requests
 from homeassistant.components.sensor import SensorEntity
-from homeassistant.const import TEMP_CELSIUS
+from homeassistant.const import TEMP_CELSIUS, PERCENTAGE
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, API_URL
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-def setup_platform(hass, config, add_entities, discovery_info=None):
-    """Nastavení platformy senzoru."""
-    api_key = hass.data[DOMAIN].get("api_key")
-    devices = get_govee_devices(api_key)
+async def async_setup_entry(hass, entry, async_add_entities):
+    """Nastavení senzorů z konfiguračního záznamu."""
+    coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
     sensors = []
-    for device in devices:
+
+    for device in coordinator.data:
         if device["model"] == "H5179":
-            sensors.append(GoveeTemperatureSensor(device, api_key))
-            sensors.append(GoveeHumiditySensor(device, api_key))
-    add_entities(sensors, True)
+            sensors.append(GoveeTemperatureSensor(coordinator, device))
+            sensors.append(GoveeHumiditySensor(coordinator, device))
 
-def get_govee_devices(api_key):
-    """Získání seznamu zařízení z Govee API."""
-    headers = {"Authorization": f"Bearer {api_key}"}
-    response = requests.get(API_URL, headers=headers)
-    if response.status_code == 200:
-        return response.json().get("data", {}).get("devices", [])
-    else:
-        _LOGGER.error("Chyba při získávání zařízení: %s", response.text)
-        return []
+    async_add_entities(sensors, update_before_add=True)
 
-class GoveeTemperatureSensor(SensorEntity):
-    """Reprezentace teplotního senzoru Govee H5179."""
+class GoveeTemperatureSensor(CoordinatorEntity, SensorEntity):
+    """Reprezentace teplotního senzoru Govee."""
 
-    def __init__(self, device, api_key):
+    def __init__(self, coordinator, device):
+        """Inicializace senzoru."""
+        super().__init__(coordinator)
         self._device = device
-        self._api_key = api_key
-        self._name = f"{device['deviceName']} Teplota"
-        self._state = None
-
-    @property
-    def name(self):
-        return self._name
+        self._attr_name = f"{device['device_name']} Teplota"
+        self._attr_unique_id = f"{device['device']}_temperature"
+        self._attr_unit_of_measurement = TEMP_CELSIUS
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, device["device"])},
+            "name": device["device_name"],
+            "manufacturer": "Govee",
+            "model": device["model"],
+        }
 
     @property
     def state(self):
-        return self._state
+        """Vrátí aktuální teplotu."""
+        return self._device["temperature"]
 
-    @property
-    def unit_of_measurement(self):
-        return TEMP_CELSIUS
+class GoveeHumiditySensor(CoordinatorEntity, SensorEntity):
+    """Reprezentace vlhkostního senzoru Govee."""
 
-    def update(self):
-        """Aktualizace stavu senzoru."""
-        data = self.get_device_data()
-        if data:
-            self._state = data.get("temperature")
-
-    def get_device_data(self):
-        """Získání dat zařízení z Govee API."""
-        headers = {"Authorization": f"Bearer {self._api_key}"}
-        response = requests.get(f"{API_URL}/{self._device['device']}/state", headers=headers)
-        if response.status_code == 200:
-            return response.json().get("data", {})
-        else:
-            _LOGGER.error("Chyba při získávání dat zařízení: %s", response.text)
-            return None
-
-class GoveeHumiditySensor(SensorEntity):
-    """Reprezentace vlhkostního senzoru Govee H5179."""
-
-    def __init__(self, device, api_key):
+    def __init__(self, coordinator, device):
+        """Inicializace senzoru."""
+        super().__init__(coordinator)
         self._device = device
-        self._api_key = api_key
-        self._name = f"{device['deviceName']} Vlhkost"
-        self._state = None
-
-    @property
-    def name(self):
-        return self._name
+        self._attr_name = f"{device['device_name']} Vlhkost"
+        self._attr_unique_id = f"{device['device']}_humidity"
+        self._attr_unit_of_measurement = PERCENTAGE
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, device["device"])},
+            "name": device["device_name"],
+            "manufacturer": "Govee",
+            "model": device["model"],
+        }
 
     @property
     def state(self):
-        return self._state
-
-    @property
-    def unit_of_measurement(self):
-        return "%"
-
-    def update(self):
-        """Aktualizace stavu senzoru."""
-        data = self.get_device_data()
-        if data:
-            self._state = data.get("humidity")
-
-    def get_device_data(self):
-        """Získání dat zařízení z Govee API."""
-        headers = {"Authorization": f"Bearer {self._api_key}"}
-        response = requests.get(f"{API_URL}/{self._device['device']}/state", headers=headers)
-        if response.status_code == 200:
-            return response.json().get("data", {})
-        else:
-            _LOGGER.error("Chyba při získávání dat zařízení: %s", response.text)
-            return None
+        """Vrátí aktuální vlhkost."""
+        return self._device["humidity"]
