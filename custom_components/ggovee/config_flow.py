@@ -1,45 +1,12 @@
-import aiohttp
-import asyncio
-import logging
+from homeassistant import config_entries
+from .const import DOMAIN
 
-_LOGGER = logging.getLogger(__name__)
+class GoveeConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for Govee."""
 
-class GoveeApiClient:
-    def __init__(self, api_key):
-        self.api_key = api_key
-        self.base_url = "https://developer-api.govee.com/v1"
-        self.headers = {
-            "Govee-API-Key": self.api_key,
-            "Content-Type": "application/json"
-        }
+    async def async_step_user(self, user_input=None):
+        """Handle the initial step."""
+        if user_input is not None:
+            return self.async_create_entry(title="Govee", data=user_input)
 
-    async def get_devices(self):
-        url = f"{self.base_url}/devices"
-        async with aiohttp.ClientSession(headers=self.headers) as session:
-            async with session.get(url) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    return data.get("data", {}).get("devices", [])
-                else:
-                    _LOGGER.error("Failed to fetch devices: %s", await response.text())
-                    return []
-
-    async def get_device_state(self, device):
-        url = f"{self.base_url}/devices/state"
-        params = {"device": device["device"], "model": device["model"]}
-        async with aiohttp.ClientSession(headers=self.headers) as session:
-            async with session.get(url, params=params) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    return data.get("data", {}).get("properties", [])
-                else:
-                    _LOGGER.error("Failed to fetch device state for %s: %s", device["device"], await response.text())
-                    return []
-
-    async def update_devices(self):
-        devices = await self.get_devices()
-        tasks = [self.get_device_state(device) for device in devices]
-        states = await asyncio.gather(*tasks)
-        for device, state in zip(devices, states):
-            device.update(state)
-        return devices
+        return self.async_show_form(step_id="user")
