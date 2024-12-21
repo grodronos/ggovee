@@ -1,4 +1,5 @@
 """Constants for the Govee integration."""
+import logging
 from datetime import timedelta
 from homeassistant.const import TEMP_CELSIUS, Platform
 
@@ -17,5 +18,8 @@ BRAND = "Govee"
 # Nastavíme interval updatů na 5 minut (300 sekund)
 UPDATE_INTERVAL = timedelta(seconds=300)
 
-# Pokud používáte pouze sensor platformu, stačí:
+# Definice loggeru pro použití v dalších souborech (např. sensor.py)
+LOGGER = logging.getLogger(__package__)
+
+# Využívané platformy (prozatím jen senzor)
 PLATFORMS = [Platform.SENSOR]
