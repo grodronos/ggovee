@@ -54,11 +54,6 @@ class GoveeHumiditySensor(CoordinatorEntity, SensorEntity):
         self._attr_device_info = {
             "identifiers": {(DOMAIN, device["device"])},
             "name": device["device_name"],
-            "manufacturer": "Govee",
-            "model": device["model"],
-        }
-
-    @property
-    def state(self):
-        """Vrátí aktuální vlhkost."""
-        return self._device["humidity"]
+            "manufacturer":
+::contentReference[oaicite:0]{index=0}
+ 
