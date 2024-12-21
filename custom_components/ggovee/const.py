@@ -1,5 +1,5 @@
-from datetime import timedelta
+"""Constants for the ggovee integration."""
+import logging
 
 DOMAIN = "ggovee"
-PLATFORMS = ["sensor"]
-UPDATE_INTERVAL = timedelta(minutes=5)
+LOGGER = logging.getLogger(__package__)
