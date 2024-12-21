@@ -1,2 +1,5 @@
+from datetime import timedelta
+
 DOMAIN = "ggovee"
-API_URL = "https://api.govee.com/v1/devices"
+PLATFORMS = ["sensor"]
+UPDATE_INTERVAL = timedelta(minutes=5)
