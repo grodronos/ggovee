@@ -4,7 +4,7 @@
     "version": "1.0.0",
     "documentation": "https://github.com/grodronos/ggovee",
     "dependencies": [],
-    "codeowners": ["Emil Doležal"],
+    "codeowners": ["grodronos"],
     "requirements": ["requests>=2.25.1"],
     "config_flow": true
 }  
