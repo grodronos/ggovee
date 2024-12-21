@@ -1,4 +1,4 @@
-import requests
+import aiohttp
 import logging
 
 _LOGGER = logging.getLogger(__name__)
@@ -12,28 +12,32 @@ class GoveeApiClient:
             "Content-Type": "application/json"
         }
 
-    def get_devices(self):
+    async def get_devices(self):
         url = f"{self.base_url}/devices"
-        response = requests.get(url, headers=self.headers)
-        if response.status_code == 200:
-            return response.json().get("data", {}).get("devices", [])
-        else:
-            _LOGGER.error("Failed to fetch devices: %s", response.text)
-            return []
+        async with aiohttp.ClientSession(headers=self.headers) as session:
+            async with session.get(url) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    return data.get("data", {}).get("devices", [])
+                else:
+                    _LOGGER.error("Failed to fetch devices: %s", await response.text())
+                    return []
 
-    def get_device_state(self, device):
+    async def get_device_state(self, device):
         url = f"{self.base_url}/devices/state"
         params = {"device": device["device"], "model": device["model"]}
-        response = requests.get(url, headers=self.headers, params=params)
-        if response.status_code == 200:
-            return response.json().get("data", {}).get("properties", [])
-        else:
-            _LOGGER.error("Failed to fetch device state for %s: %s", device["device"], response.text)
-            return []
+        async with aiohttp.ClientSession(headers=self.headers) as session:
+            async with session.get(url, params=params) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    return data.get("data", {}).get("properties", [])
+                else:
+                    _LOGGER.error("Failed to fetch device state for %s: %s", device["device"], await response.text())
+                    return []
 
-    def update_devices(self):
-        devices = self.get_devices()
+    async def update_devices(self):
+        devices = await self.get_devices()
         for device in devices:
-            state = self.get_device_state(device)
+            state = await self.get_device_state(device)
             device.update(state)
         return devices
