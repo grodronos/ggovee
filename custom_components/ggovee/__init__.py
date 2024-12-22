@@ -4,7 +4,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from .GoveeApi.UserDevices.controller import Controller
 from .GoveeApi.UserDevices.models import Device
-from .const import DOMAIN, STARTUP_MESSAGE
+from .const import DOMAIN
 from .coordinator import GoveeDataUpdateCoordinator
 from typing import Final
 import logging
@@ -16,20 +16,20 @@ logging.basicConfig(level=logging.INFO)
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Govee from a config entry."""
 
-    _LOGGER.debug("grodronos")
-    controller = Controller(api_key=str(entry.data.get(CONF_API_KEY, None)))
+    logger.debug("grodronos")
+    controller = Controller(api_key=str(entry.data.get("api_key", None)))
 
     try:
         # Získání zařízení
         devices: List[Device] = await controller.getDevices(hass)
-         # Výpis zařízení
-        print(f"Získáno zařízení: {len(devices)}")
+        # Výpis zařízení
+        logger.debug("Získáno zařízení: %s", str(len(devices)))
         for device in devices:
-            print(f"Zařízení: {device.deviceName} ({device.device})")
+            logger.debug("Zařízení: %s (%s)", str(device.deviceName), str(device.device))
             for capability in device.capabilities:
-                print(f"  - {capability.instance}")
+                logger.debug("  - %s", str(capability.instance))
     except Exception as e:
-        print(f"Chyba: {e}")
+        logger.error("Chyba: %s", str(e))
 
     # Vytvoříme instanci koordinátoru:
     coordinator = GoveeDataUpdateCoordinator(hass, entry)
