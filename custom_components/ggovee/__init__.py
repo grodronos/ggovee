@@ -12,7 +12,7 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Govee from a config entry."""
-    _LOGGER.info(STARTUP_MESSAGE)
+    _LOGGER.info("__init__:async_setup_entry")
 
     # Vytvoříme instanci koordinátoru:
     coordinator = GoveeDataUpdateCoordinator(hass, entry)

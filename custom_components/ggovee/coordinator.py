@@ -33,6 +33,7 @@ class GoveeDataUpdateCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         """Update data via library (BLE or other)."""
+        _LOGGER.info("GoveeDataUpdateCoordinator:_async_update_data")
         device_id = self.entry.data.get(CONF_BLE_DEVICE)
         timeout = self.entry.data.get(CONF_BLE_TIMEOUT, DEFAULT_SCAN_TIMEOUT)
 
