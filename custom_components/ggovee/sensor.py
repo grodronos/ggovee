@@ -23,7 +23,7 @@ from homeassistant.const import (
     UnitOfElectricCurrent,
 )
 
-from .const import DOMAIN, LOGGER
+from .const import DOMAIN
 from .entity import GoveeEntity
 from .coordinator import GoveeDataUpdateCoordinator
 

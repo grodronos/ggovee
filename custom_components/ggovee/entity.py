@@ -1,7 +1,7 @@
 """Base entity for Govee devices."""
 
 from homeassistant.helpers.entity import Entity
-from .const import DOMAIN, LOGGER, MANUFACTURER
+from .const import DOMAIN, MANUFACTURER
 
 
 class GoveeEntity(Entity):

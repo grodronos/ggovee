@@ -4,20 +4,36 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from .GoveeApi.UserDevices.controller import Controller
 from .GoveeApi.UserDevices.models import Device
-from .const import DOMAIN
+from .const import DOMAIN, UPDATE_INTERVAL
 from .coordinator import GoveeDataUpdateCoordinator
 from typing import Final
+
+from homeassistant.const import (
+    CONF_API_KEY,
+    CONF_DEVICES,
+    CONF_PARAMS,
+    CONF_SCAN_INTERVAL,
+)
+
 import logging
 import asyncio
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
+async def async_setup(hass: HomeAssistant, config: dict):
+    hass.data.setdefault(DOMAIN, {})
+    return True
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Govee from a config entry."""
 
     logger.debug("grodronos")
-    controller = Controller(api_key=str(entry.data.get("api_key", None)))
+    data = hass.data[DOMAIN][entry.entry_id]
+    data[CONF_PARAMS] = entry.data
+    data[CONF_SCAN_INTERVAL] = UPDATE_INTERVAL
+
+    controller = Controller(api_key=str(entry.data.get(CONF_API_KEY, None)))
 
     try:
         # Získání zařízení
@@ -26,6 +42,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         logger.debug("Získáno zařízení: %s", str(len(devices)))
         for device in devices:
             logger.debug("Zařízení: %s (%s)", str(device.deviceName), str(device.device))
+            coordinator = GoveeDataUpdateCoordinator(hass, entry, device)
             for capability in device.capabilities:
                 logger.debug("  - %s", str(capability.instance))
     except Exception as e:
