@@ -10,11 +10,5 @@ class CapabilityProcessor:
                 return state_value  # Defaultní zpracování pro neznámé instance
     
     def fahrenheit_to_celsius(self, fahrenheit: float) -> float:
-        """
-        Převádí teplotu z Fahrenheit na Celsius.
-
-        :param fahrenheit: Teplota ve stupních Fahrenheit
-        :return: Teplota ve stupních Celsius
-        """
-        celsius = (fahrenheit - 32) * 5/9
-        return celsius
+        celsius = (fahrenheit - 32.0) * 5.0 / 9.0
+        return round(celsius, 3)
