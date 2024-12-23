@@ -9,7 +9,7 @@ import logging
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-class Controller:
+class UserDevicesController:
     def __init__(self, api_key: str, timeout: int = 10):
         """
         Inicializuje Controller s přednastavenou URL, hlavičkami a timeoutem.

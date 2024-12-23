@@ -1,6 +1,6 @@
 # GoveeApi/UserDevices/__init__.py
 
-from .controller import Controller
+from .user_devices_controller import UserDevicesController
 from .models import Device
 
-__all__ = ["Controller", "Device"]
+__all__ = ["UserDevicesController", "Device"]
