@@ -1,0 +1,13 @@
+{
+    "sensor": {
+        "sensorHumidity": {
+            "unit": "%",
+            "name": "Vlhkost"
+        },
+        "sensorTemperature": {
+            "unit": "°C",
+            "name": "Teplota"
+        }
+    }
+}
+  

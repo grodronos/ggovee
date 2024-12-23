@@ -1,0 +1,13 @@
+{
+    "sensor": {
+        "sensorHumidity": {
+            "unit": "%",
+            "name": "Humidity"
+        },
+        "sensorTemperature": {
+            "unit": "°C",
+            "name": "Temperature"
+        }
+    }
+}
+  

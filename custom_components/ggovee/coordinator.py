@@ -5,14 +5,35 @@ from .GoveeApi.UserDevices.models import Device
 from .const import DOMAIN, API_KEY, UPDATE_INTERVAL
 import aiohttp
 import logging
+import json
+import os
 
 logger = logging.getLogger(__name__)
+
+def get_translations(hass, domain):
+    lang = hass.config.language
+    result = load_translation(hass, domain, lang)
+    if not result:
+        return load_translation(hass, domain, "en")
+    return result
+
+def load_translation(hass, domain, lang):
+    translation_file = os.path.join(
+        os.path.dirname(__file__),
+        "translations",
+        f"{lang}.json"
+    )
+    if os.path.isfile(translation_file):
+        with open(translation_file, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return None
 
 class Coordinator(DataUpdateCoordinator):
     def __init__(self, hass, entry):
         self.hass = hass
         self.entry = entry
         self.api_key = entry.data.get(API_KEY, None)
+        self.translations = get_translations(hass, DOMAIN)
 
         super().__init__(
             hass,
@@ -30,17 +51,18 @@ class Coordinator(DataUpdateCoordinator):
                 try:
                     data = await userDevicesController.getDevices(self.hass)
                     self.data["devices"] = {}
-                    self.data["statuses"] = {}
+                    self.data["sensors"] = {}
                     logger.debug("Získáno zařízení: %s", str(len(data)))
                     for device in data:
                         logger.debug("Zařízení: %s (%s)", str(device.deviceName), str(device.device))
                         self.data["devices"][device.device] = device
-                        self.data["statuses"][device.device] = {}
+                        self.data["sensors"][device.device] = {}
                         for capability in device.capabilities:
                             logger.debug("  - %s", str(capability.instance))
-                            self.data["statuses"][device.device][capability.instance] = {}
-                            self.data["statuses"][device.device][capability.instance]["unit"] = "teplota"
-                            self.data["statuses"][device.device][capability.instance]["value"] = 0
+                            self.data["sensors"][device.device][capability.instance] = {}
+                            self.data["sensors"][device.device][capability.instance]["unit"] = self.translations["sensor"][capability.instance]["unit"]
+                            self.data["sensors"][device.device][capability.instance]["name"] = self.translations["sensor"][capability.instance]["name"]
+                            self.data["sensors"][device.device][capability.instance]["value"] = 0
                 except Exception as e:
                     logger.error("Chyba: %s", str(e))
 

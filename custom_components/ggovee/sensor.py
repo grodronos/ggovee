@@ -29,16 +29,16 @@ class Sensor(CoordinatorEntity, Entity):
         self.device_id = device_id
         self.sensor_id = sensor_id
         self._attr_unique_id = f"{device_id}_{sensor_id}"
-        self._attr_name = f"{device_id} {sensor_id}"  # Můžete upravit podle potřeby
+        self._attr_name = self.coordinator.data["sensors"][self.device_id][self.sensor_id]["name"]
         _LOGGER.debug("Inicializován senzor %s pro zařízení %s", sensor_id, device_id)
 
     @property
     def state(self):
-        return self.coordinator.data["statuses"][self.device_id][self.sensor_id]["value"]
+        return self.coordinator.data["sensors"][self.device_id][self.sensor_id]["value"]
 
     @property
     def unit_of_measurement(self):
-        return self.coordinator.data["statuses"][self.device_id][self.sensor_id]["unit"]
+        return self.coordinator.data["sensors"][self.device_id][self.sensor_id]["unit"]
 
     @property
     def device_info(self):
