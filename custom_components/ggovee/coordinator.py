@@ -2,7 +2,9 @@ from datetime import timedelta
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from .GoveeApi.UserDevices.user_devices_controller import UserDevicesController
 from .GoveeApi.UserDevices.models import Device
+from .GoveeApi.DeviceState.device_state_controller import DeviceStateController
 from .const import DOMAIN, API_KEY, UPDATE_INTERVAL
+from .GoveeApi.DeviceState.models import Capability, State, CapabilityProcessor
 import aiohttp
 import logging
 import json
@@ -34,6 +36,7 @@ class Coordinator(DataUpdateCoordinator):
         self.entry = entry
         self.api_key = entry.data.get(API_KEY, None)
         self.translations = get_translations(hass, DOMAIN)
+        self.processor = CapabilityProcessor()
 
         super().__init__(
             hass,
@@ -67,6 +70,12 @@ class Coordinator(DataUpdateCoordinator):
                     logger.error("Chyba: %s", str(e))
 
             logger.debug("Aktualizace dat")
+            deviceStateController = DeviceStateController(api_key=self.api_key)
+            for deviceId, device in self.data["devices"].items():
+                capabilities = await deviceStateController.getDeviceState(self.hass, device)
+                for capability in capabilities:
+                    if capability.instance in self.data["sensors"][deviceId]:
+                        self.data["sensors"][deviceId][capability.instance]["value"] = self.processor.process(capability.instance, capability.state.value)
             #self.statuses = await self.fetch_statuses()
 
             # Aktualizace stavů senzorů ve stávajících zařízeních

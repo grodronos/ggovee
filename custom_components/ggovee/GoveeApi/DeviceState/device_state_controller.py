@@ -1,16 +1,37 @@
 # GoveeApi/UserDevices/controller.py
-# Response JSON: {'code': 200, 'message': 'success', 'data': [{'sku': 'H5179', 'device': '59:7C:1F:64:04:40:EC:83', 'deviceName': 'Domek', 'type': 'devices.types.thermometer', 'capabilities': [{'type': 'devices.capabilities.property', 'instance': 'sensorTemperature'}, {'type': 'devices.capabilities.property', 'instance': 'sensorHumidity'}]}, {'sku': 'H5179', 'device': 'E4:EC:1F:64:04:42:74:56', 'deviceName': 'Dům1', 'type': 'devices.types.thermometer', 'capabilities': [{'type': 'devices.capabilities.property', 'instance': 'sensorTemperature'}, {'type': 'devices.capabilities.property', 'instance': 'sensorHumidity'}]}, {'sku': 'H5179', 'device': 'C5:1F:1F:64:04:40:AC:89', 'deviceName': 'Garáž', 'type': 'devices.types.thermometer', 'capabilities': [{'type': 'devices.capabilities.property', 'instance': 'sensorTemperature'}, {'type': 'devices.capabilities.property', 'instance': 'sensorHumidity'}]}, {'sku': 'H5179', 'device': 'BB:AA:1F:64:04:43:3C:B2', 'deviceName': 'Dům2', 'type': 'devices.types.thermometer', 'capabilities': [{'type': 'devices.capabilities.property', 'instance': 'sensorTemperature'}, {'type': 'devices.capabilities.property', 'instance': 'sensorHumidity'}]}, {'sku': 'H5179', 'device': 'BB:AA:1F:64:04:43:34:2A', 'deviceName': 'Půda', 'type': 'devices.types.thermometer', 'capabilities': [{'type': 'devices.capabilities.property', 'instance': 'sensorTemperature'}, {'type': 'devices.capabilities.property', 'instance': 'sensorHumidity'}]}, {'sku': 'H5179', 'device': 'BB:AA:1F:64:04:41:D8:EF', 'deviceName': 'Venku', 'type': 'devices.types.thermometer', 'capabilities': [{'type': 'devices.capabilities.property', 'instance': 'sensorTemperature'}, {'type': 'devices.capabilities.property', 'instance': 'sensorHumidity'}]}]}
+# Response JSON: {'requestId': 'e454bd7a-4098-4fc0-97de-edbe77bb50b0', 'msg': 'success', 'code': 200, 'payload': {
+# 'sku': 'H5179', 
+# 'device': '59:7C:1F:64:04:40:EC:83', 
+# 'capabilities': [
+#     {
+#         'type': 'devices.capabilities.online', 
+#         'instance': 'online', 
+#         'state': {'value': True}
+#     }, 
+#     {
+#         'type': 'devices.capabilities.property',
+#         'instance': 'sensorTemperature',
+#         'state': {'value': 55.76}
+#     }, 
+#     {
+#         'type': 'devices.capabilities.property',
+#         'instance': 'sensorHumidity', 
+#         'state': {'value': {'currentHumidity': 76}}
+#     }
+# ]}}
 
 import requests
 from typing import List, Dict
-from .models import Response, Device
+from .models import Response, Payload, Capability
 import logging
+import uuid
+import json
 
 # Konfigurace loggeru
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-class UserDevicesController:
+class DeviceStateController:
     def __init__(self, api_key: str, timeout: int = 10):
         """
         Inicializuje Controller s přednastavenou URL, hlavičkami a timeoutem.
@@ -25,8 +46,10 @@ class UserDevicesController:
             "Content-Type":"application/json",
             "Govee-API-Key": api_key
         }
+        path = 'device/state'
+        self.url = f"{self.base_url}/{path.strip('/')}"
 
-    async def getDevices(self, hass) -> List[Device]:
+    async def getDeviceState(self, hass, device) -> Payload:
         """
         Asynchronně získá seznam zařízení z API.
 
@@ -36,16 +59,13 @@ class UserDevicesController:
         Returns:
             List[Device]: Seznam zařízení.
         """
-        path = 'user/devices'
-        url = f"{self.base_url}/{path.strip('/')}"
-        logger.info(f"Request URL: {url}")
+        data = '{"requestId": "'+ str(uuid.uuid4()) + '","payload": {"sku": "' + device.sku + '","device": "' + device.device + '"}}'
+        data = json.loads(data)
+        logger.info(f"Request URL: {self.url}")
 
         try:
             # Definujte lambda funkci pro požadavek
-            request_func = lambda: requests.get(url, headers=self.headers, timeout=self.timeout)
-
-            # Spusťte požadavek v executor job (blokující operace mimo hlavní vlákno)
-            response = await hass.async_add_executor_job(request_func)
+            response = await hass.async_add_executor_job(lambda: requests.post(self.url,json=data,headers=self.headers,timeout=self.timeout))
 
             # Zkontrolujte HTTP status kód
             if response.status_code != 200:
@@ -53,7 +73,7 @@ class UserDevicesController:
                 response.raise_for_status()
 
             # Získejte JSON data
-            response_json = response.json()
+            response_json = json.loads(response.text)
             logger.debug(f"Response JSON: {response_json}")
 
             # Parsování odpovědi pomocí metody parse_api_response
@@ -63,8 +83,7 @@ class UserDevicesController:
                 logger.error(f"API Error: {api_response.code} - {api_response.message}")
                 raise Exception(f"API Error: {api_response.message}")
 
-            logger.info(f"Successfully retrieved {len(api_response.data)} devices.")
-            return api_response.data
+            return api_response.payload.capabilities
 
         except requests.exceptions.RequestException as e:
             logger.error(f"Request Exception: {e}")
