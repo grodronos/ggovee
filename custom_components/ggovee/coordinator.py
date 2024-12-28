@@ -8,7 +8,6 @@ from .GoveeApi.DeviceState.models import Capability, State, CapabilityProcessor
 import logging
 import json
 import os
-import copy
 import aiofiles
 
 logger = logging.getLogger(__name__)
@@ -83,7 +82,6 @@ class Coordinator(DataUpdateCoordinator):
                 except Exception as e:
                     logger.error("Chyba: %s", str(e))
 
-            self.data = copy.deepcopy(self.data)
             for deviceId, device in self.data["devices"].items():
                 capabilities = await self.deviceStateController.getDeviceState(self.hass, device)
                 for capability in capabilities:
