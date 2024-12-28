@@ -76,7 +76,6 @@ class Coordinator(DataUpdateCoordinator):
                             s["unit"] = self.translations["sensor"][capability.instance]["unit"]
                             s["name"] = self.translations["sensor"][capability.instance]["name"]
                             s["unique_id"] = (f"{device.device}_{capability.instance}").replace(":", "_").lower()
-                            s["entity_id"] = s["unique_id"]
                             s["value"] = 0
                             self.data["sensors"][device.device][capability.instance] = s
                 except Exception as e:
@@ -87,12 +86,13 @@ class Coordinator(DataUpdateCoordinator):
                 for capability in capabilities:
                     if capability.instance in self.data["sensors"][deviceId]:
                         newValue = self.processor.process(capability.instance, capability.state.value)
-                        if newValue != self.data["sensors"][deviceId][capability.instance]["value"]:
+                        oldValue = self.data["sensors"][deviceId][capability.instance]["value"]
+                        if oldValue != 0 and newValue != oldValue:
                             self.hass.bus.async_fire(
                                 "logbook_entry",
                                 {
                                     "message": f"{self.data["devices"][deviceId].deviceName}: {newValue}{self.data["sensors"][deviceId][capability.instance]["unit"]}",
-                                    "domain": DOMAIN,
+                                    "domain": "sensor",
                                     "entity_id": f"sensor.{self.data["sensors"][deviceId][capability.instance]["entity_id"]}",
                                 },
                             )
