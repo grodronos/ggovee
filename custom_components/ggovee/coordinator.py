@@ -92,7 +92,7 @@ class Coordinator(DataUpdateCoordinator):
                                 {
                                     "message": f"{self.data["devices"][deviceId].deviceName}: {newValue}{self.data["sensors"][deviceId][capability.instance]["unit"]}",
                                     "domain": "sensor",
-                                    "entity_id": f"{self.data["sensors"][deviceId][capability.instance].get("entity_id", self.data["sensors"][deviceId][capability.instance]["name"])}",
+                                    "entity_id": self.data["sensors"][deviceId][capability.instance].get("entity_id", f"sensor.{self.data["sensors"][deviceId][capability.instance]["name"]}"),
                                 },
                             )
                         self.data["sensors"][deviceId][capability.instance]["value"] = newValue
