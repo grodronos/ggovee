@@ -72,12 +72,11 @@ class Coordinator(DataUpdateCoordinator):
                         self.data["devices"][device.device] = device
                         self.data["sensors"][device.device] = {}
                         for capability in device.capabilities:
-                            s = {}
-                            s["unit"] = self.translations["sensor"][capability.instance]["unit"]
-                            s["name"] = self.translations["sensor"][capability.instance]["name"]
-                            s["unique_id"] = (f"{device.device}_{capability.instance}").replace(":", "_").lower()
-                            s["value"] = 0
-                            self.data["sensors"][device.device][capability.instance] = s
+                            self.data["sensors"][device.device][capability.instance] = {}
+                            self.data["sensors"][device.device][capability.instance]["unit"] = self.translations["sensor"][capability.instance]["unit"]
+                            self.data["sensors"][device.device][capability.instance]["name"] = self.translations["sensor"][capability.instance]["name"]
+                            self.data["sensors"][device.device][capability.instance]["unique_id"] = (f"{device.device}_{capability.instance}").replace(":", "_").lower()
+                            self.data["sensors"][device.device][capability.instance]["value"] = 0
                 except Exception as e:
                     logger.error("Chyba: %s", str(e))
 
@@ -87,13 +86,13 @@ class Coordinator(DataUpdateCoordinator):
                     if capability.instance in self.data["sensors"][deviceId]:
                         newValue = self.processor.process(capability.instance, capability.state.value)
                         oldValue = self.data["sensors"][deviceId][capability.instance]["value"]
-                        if oldValue != 0 and newValue != oldValue:
+                        if newValue != oldValue:
                             self.hass.bus.async_fire(
                                 "logbook_entry",
                                 {
                                     "message": f"{self.data["devices"][deviceId].deviceName}: {newValue}{self.data["sensors"][deviceId][capability.instance]["unit"]}",
                                     "domain": "sensor",
-                                    "entity_id": f"sensor.{self.data["sensors"][deviceId][capability.instance]["entity_id"]}",
+                                    "entity_id": f"{self.data["sensors"][deviceId][capability.instance].get("entity_id", self.data["sensors"][deviceId][capability.instance]["name"])}",
                                 },
                             )
                         self.data["sensors"][deviceId][capability.instance]["value"] = newValue

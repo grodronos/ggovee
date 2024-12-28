@@ -23,7 +23,10 @@ class HumiditySensor(CoordinatorEntity, SensorEntity):
         self.sensor_id = sensor_id
         self._attr_unique_id = coordinator.data["sensors"][device_id][sensor_id]["unique_id"]
         self._attr_device_class = SensorDeviceClass.HUMIDITY
-        coordinator.data["sensors"][device_id][sensor_id]["entity_id"] = seft.entity_id
+
+    async def async_added_to_hass(self):
+        await super().async_added_to_hass()
+        self.coordinator.data["sensors"][self.device_id][self.sensor_id]["entity_id"] = self.entity_id
 
     @property
     def name(self) -> str:
@@ -58,7 +61,10 @@ class TemperatureSensor(CoordinatorEntity, SensorEntity):
         self.sensor_id = sensor_id
         self._attr_unique_id = coordinator.data["sensors"][device_id][sensor_id]["unique_id"]
         self._attr_device_class = SensorDeviceClass.TEMPERATURE
-        coordinator.data["sensors"][device_id][sensor_id]["entity_id"] = seft.entity_id
+
+    async def async_added_to_hass(self):
+        await super().async_added_to_hass()
+        self.coordinator.data["sensors"][self.device_id][self.sensor_id]["entity_id"] = self.entity_id
 
     @property
     def name(self) -> str:
