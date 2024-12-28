@@ -5,29 +5,43 @@ from .GoveeApi.UserDevices.models import Device
 from .GoveeApi.DeviceState.device_state_controller import DeviceStateController
 from .const import DOMAIN, API_KEY, UPDATE_INTERVAL
 from .GoveeApi.DeviceState.models import Capability, State, CapabilityProcessor
-import aiohttp
 import logging
 import json
 import os
+import copy
+import aiofiles
 
 logger = logging.getLogger(__name__)
 
-def get_translations(hass, domain):
+async def get_translations(hass, domain):
     lang = hass.config.language
-    result = load_translation(hass, domain, lang)
+    result = await load_translation(hass, domain, lang)
     if not result:
-        return load_translation(hass, domain, "en")
+        logger.warning(f"Překlad pro jazyk '{lang}' nebyl nalezen. Načítám anglický překlad.")
+        result = await load_translation(hass, domain, "en")
     return result
 
-def load_translation(hass, domain, lang):
+async def load_translation(hass, domain, lang):
     translation_file = os.path.join(
         os.path.dirname(__file__),
         "translations",
         f"{lang}.json"
     )
+
     if os.path.isfile(translation_file):
-        with open(translation_file, "r", encoding="utf-8") as f:
-            return json.load(f)
+        try:
+            async with aiofiles.open(translation_file, "r", encoding="utf-8") as f:
+                content = await f.read()
+            return json.loads(content)
+        except FileNotFoundError:
+            logger.warning(f"Překladový soubor nebyl nalezen: {translation_file}")
+        except json.JSONDecodeError as e:
+            logger.error(f"Chyba při dekódování JSON z {translation_file}: {e}")
+        except Exception as e:
+            logger.error(f"Neočekávaná chyba při načítání překladového souboru {translation_file}: {e}")
+    else:
+        logger.warning(f"Překladový soubor neexistuje: {translation_file}")
+    
     return None
 
 class Coordinator(DataUpdateCoordinator):
@@ -35,7 +49,6 @@ class Coordinator(DataUpdateCoordinator):
         self.hass = hass
         self.entry = entry
         self.api_key = entry.data.get(API_KEY, None)
-        self.translations = get_translations(hass, DOMAIN)
         self.processor = CapabilityProcessor()
 
         super().__init__(
@@ -49,46 +62,43 @@ class Coordinator(DataUpdateCoordinator):
         try:
             if not self.data:
                 self.data = {}
-                logger.debug("První načtení dat: seznam zařízení a jejich stavy")
-                userDevicesController = UserDevicesController(api_key=self.api_key)
+                self.translations = await get_translations(self.hass, DOMAIN)
+                self.userDevicesController = UserDevicesController(api_key=self.api_key)
+                self.deviceStateController = DeviceStateController(api_key=self.api_key)
                 try:
-                    data = await userDevicesController.getDevices(self.hass)
+                    data = await self.userDevicesController.getDevices(self.hass)
                     self.data["devices"] = {}
                     self.data["sensors"] = {}
-                    logger.debug("Získáno zařízení: %s", str(len(data)))
                     for device in data:
-                        logger.debug("Zařízení: %s (%s)", str(device.deviceName), str(device.device))
                         self.data["devices"][device.device] = device
                         self.data["sensors"][device.device] = {}
                         for capability in device.capabilities:
-                            logger.debug("  - %s", str(capability.instance))
-                            self.data["sensors"][device.device][capability.instance] = {}
-                            self.data["sensors"][device.device][capability.instance]["unit"] = self.translations["sensor"][capability.instance]["unit"]
-                            self.data["sensors"][device.device][capability.instance]["name"] = self.translations["sensor"][capability.instance]["name"]
-                            self.data["sensors"][device.device][capability.instance]["value"] = 0
+                            s = {}
+                            s["unit"] = self.translations["sensor"][capability.instance]["unit"]
+                            s["name"] = self.translations["sensor"][capability.instance]["name"]
+                            s["unique_id"] = (f"{device.device}_{capability.instance}").replace(":", "_").lower()
+                            s["entity_id"] = s["unique_id"]
+                            s["value"] = 0
+                            self.data["sensors"][device.device][capability.instance] = s
                 except Exception as e:
                     logger.error("Chyba: %s", str(e))
 
-            logger.debug("Aktualizace dat")
-            deviceStateController = DeviceStateController(api_key=self.api_key)
+            self.data = copy.deepcopy(self.data)
             for deviceId, device in self.data["devices"].items():
-                capabilities = await deviceStateController.getDeviceState(self.hass, device)
+                capabilities = await self.deviceStateController.getDeviceState(self.hass, device)
                 for capability in capabilities:
                     if capability.instance in self.data["sensors"][deviceId]:
-                        self.data["sensors"][deviceId][capability.instance]["value"] = self.processor.process(capability.instance, capability.state.value)
-            #self.statuses = await self.fetch_statuses()
-
-            # Aktualizace stavů senzorů ve stávajících zařízeních
-            #for device in data.get("devices", []):
-            #    device_id = device.get("id")
-            #    if device_id in statuses:
-            #        for sensor in device.get("sensors", []):
-            #            sensor_id = sensor.get("id")
-            #            if sensor_id in statuses[device_id]:
-            #                sensor["state"] = statuses[device_id][sensor_id]["state"]
-            #                sensor["unit"] = statuses[device_id][sensor_id]["unit"]
-
-            #logger.debug("Aktualizovaná data: %s", data)
+                        newValue = self.processor.process(capability.instance, capability.state.value)
+                        if newValue != self.data["sensors"][deviceId][capability.instance]["value"]:
+                            self.hass.bus.async_fire(
+                                "logbook_entry",
+                                {
+                                    "message": f"{self.data["devices"][deviceId].deviceName}: {newValue}{self.data["sensors"][deviceId][capability.instance]["unit"]}",
+                                    "domain": DOMAIN,
+                                    "entity_id": f"sensor.{self.data["sensors"][deviceId][capability.instance]["entity_id"]}",
+                                },
+                            )
+                        self.data["sensors"][deviceId][capability.instance]["value"] = newValue
             return self.data
 
         except Exception as e:
