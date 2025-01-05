@@ -81,21 +81,24 @@ class Coordinator(DataUpdateCoordinator):
                     logger.error("Chyba: %s", str(e))
 
             for deviceId, device in self.data["devices"].items():
-                capabilities = await self.deviceStateController.getDeviceState(self.hass, device)
-                for capability in capabilities:
-                    if capability.instance in self.data["sensors"][deviceId]:
-                        newValue = self.processor.process(capability.instance, capability.state.value)
-                        oldValue = self.data["sensors"][deviceId][capability.instance]["value"]
-                        if newValue != oldValue:
-                            self.hass.bus.async_fire(
-                                "logbook_entry",
-                                {
-                                    "message": f"{self.data["devices"][deviceId].deviceName}: {newValue}{self.data["sensors"][deviceId][capability.instance]["unit"]}",
-                                    "domain": "sensor",
-                                    "entity_id": self.data["sensors"][deviceId][capability.instance].get("entity_id", f"sensor.{self.data["sensors"][deviceId][capability.instance]["name"]}"),
-                                },
-                            )
-                        self.data["sensors"][deviceId][capability.instance]["value"] = newValue
+                try:
+                    capabilities = await self.deviceStateController.getDeviceState(self.hass, device)
+                    for capability in capabilities:
+                        if capability.instance in self.data["sensors"][deviceId]:
+                            newValue = self.processor.process(capability.instance, capability.state.value)
+                            oldValue = self.data["sensors"][deviceId][capability.instance]["value"]
+                            if newValue != oldValue:
+                                self.hass.bus.async_fire(
+                                    "logbook_entry",
+                                    {
+                                        "message": f"{self.data["devices"][deviceId].deviceName}: {newValue}{self.data["sensors"][deviceId][capability.instance]["unit"]}",
+                                        "domain": "sensor",
+                                        "entity_id": self.data["sensors"][deviceId][capability.instance].get("entity_id", f"sensor.{self.data["sensors"][deviceId][capability.instance]["name"]}"),
+                                    },
+                                )
+                            self.data["sensors"][deviceId][capability.instance]["value"] = newValue
+                except Exception as e:
+                    logger.error("Chyba při načítání capabilities: %s", e)
             return self.data
 
         except Exception as e:
