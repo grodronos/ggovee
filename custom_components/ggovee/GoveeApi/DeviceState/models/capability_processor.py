@@ -3,7 +3,7 @@ class CapabilityProcessor:
     def process(self, capability_instance: str, state_value):
         match capability_instance:
             case "sensorHumidity":
-                return float(state_value.get("currentHumidity"))
+                return float(state_value)
             case "sensorTemperature":
                 return self.fahrenheit_to_celsius(float(state_value))
             case _:
