@@ -16,7 +16,7 @@
 #     {
 #         'type': 'devices.capabilities.property',
 #         'instance': 'sensorHumidity', 
-#         'state': {'value': {'currentHumidity': 76}}
+#         'state': {'value': 73.1}
 #     }
 # ]}}
 
