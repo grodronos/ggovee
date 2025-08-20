@@ -3,15 +3,14 @@ class CapabilityProcessor:
     def process(self, capability_instance: str, state_value):
         match capability_instance:
             case "sensorHumidity":
-                return float(state_value) if state_value not in ("", None) else 0.0
+                v = state_value.get("value") if isinstance(state_value, dict) else state_value
+                return float(v) if v not in ("", None) else 0.0
             case "sensorTemperature":
-                return (
-                    self.fahrenheit_to_celsius(float(state_value))
-                    if state_value not in ("", None)
-                    else 0.0
-                )
+                v = state_value.get("value") if isinstance(state_value, dict) else state_value
+                return self.fahrenheit_to_celsius(float(v)) if v not in ("", None) else 0.0
             case "online":
-                return bool(state_value) if state_value not in ("", None) else false
+                v = state_value.get("value") if isinstance(state_value, dict) else state_value
+                return bool(v) if v not in ("", None) else False
             case _:
                 return state_value  # Defaultní zpracování pro neznámé instance
 
