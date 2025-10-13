@@ -46,8 +46,7 @@ class UserDevicesController:
 
     def parse_api_response(self, response: Dict) -> Response:
         try:
-            api_response = Response(**response)
-            return api_response
+            return Response.from_dict(response)
         except Exception as e:
             logger.error(f"Chyba při parsování odpovědi: {e}")
             raise

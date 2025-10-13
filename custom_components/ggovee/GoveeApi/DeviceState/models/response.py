@@ -1,13 +1,21 @@
 # GoveeApi/DeviceState/models/response.py
-from pydantic import BaseModel, Field
+from dataclasses import dataclass
+from typing import Any, Dict
 from .payload import Payload
 
 
-class Response(BaseModel):
-    requestId: str = Field(..., alias="requestId")
+@dataclass
+class Response:
+    requestId: str
     msg: str
     code: int
     payload: Payload
 
-    class Config:
-        allow_population_by_field_name = True
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "Response":
+        return cls(
+            requestId=data.get("requestId", ""),
+            msg=data.get("msg", ""),
+            code=data.get("code", 0),
+            payload=Payload.from_dict(data.get("payload", {})),
+        )

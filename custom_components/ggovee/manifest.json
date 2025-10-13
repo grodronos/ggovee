@@ -5,6 +5,9 @@
     "documentation": "https://github.com/grodronos/ggovee",
     "dependencies": [],
     "codeowners": ["grodronos/ggovee"],
-    "requirements": ["requests>=2.25.1"],
+    "requirements": [
+        "requests>=2.25.1",
+        "aiofiles>=23.1.0"
+    ],
     "config_flow": true
 }  
