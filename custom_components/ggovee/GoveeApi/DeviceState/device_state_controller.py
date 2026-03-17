@@ -30,7 +30,7 @@ import json
 logger = logging.getLogger(__name__)
 
 class DeviceStateController:
-    def __init__(self, api_key: str, timeout: int = 10):
+    def __init__(self, api_key: str, timeout: int = 60):
         self.base_url = "https://openapi.api.govee.com/router/api/v1"
         self.timeout = timeout
         self.headers={
